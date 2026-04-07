@@ -13,8 +13,6 @@ import com.pedropathing.paths.PathChain;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
-import com.qualcomm.robotcore.hardware.CRServoImpl;
-import com.qualcomm.robotcore.hardware.CRServoImplEx;
 import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
@@ -36,7 +34,7 @@ public class SITH_BLUE_TELE extends OpMode {
     private boolean slowMode = false;
     private double slowModeMultiplier;
 
-    private CRServo testServo = null;
+    private Servo liftServo = null;
 
 
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -59,8 +57,8 @@ public class SITH_BLUE_TELE extends OpMode {
         //-------------------
         //----INIT SERVOS----
         //-------------------
-        testServo = hardwareMap.get(CRServo.class, "Servo");
-        testServo.setPower(0.0);
+        liftServo = hardwareMap.get(Servo.class, "Servo");
+        liftServo.setPosition(0.0);
 
     }
 
@@ -124,12 +122,12 @@ public class SITH_BLUE_TELE extends OpMode {
        }
 
 
-       if (gamepad1.a) {
-           testServo.setPower(1.0);
-       } else if (gamepad1.b) {
-           testServo.setPower(-1.0);
-       } else {
-           testServo.setPower(0.0);
+       if (gamepad2.a) {
+           liftServo.setPosition(0.7);
+       }
+
+       if (gamepad2.b) {
+           liftServo.setPosition(0.0);
        }
 
 

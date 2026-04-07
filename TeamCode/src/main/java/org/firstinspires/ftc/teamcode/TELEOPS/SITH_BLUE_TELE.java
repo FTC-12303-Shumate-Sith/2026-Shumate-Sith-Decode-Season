@@ -10,14 +10,19 @@ import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.HeadingInterpolator;
 import com.pedropathing.paths.Path;
 import com.pedropathing.paths.PathChain;
+import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.CRServo;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 
+import org.firstinspires.ftc.teamcode.Prism.GoBildaPrismDriver;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 import java.util.function.Supplier;
+
 
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 // OP MODE & CONFIGURATION
@@ -34,7 +39,25 @@ public class SITH_BLUE_TELE extends OpMode {
     private boolean slowMode = false;
     private double slowModeMultiplier;
 
-    private Servo liftServo = null;
+    //-------------------
+    //--DECLARE SERVOS---
+    //-------------------
+    private Servo odometryLift = null;
+    private Servo hoodPitch = null;
+
+    //-------------------
+    //--DECLARE MOTORS---
+    //-------------------
+    private DcMotorSimple intake = null;
+    private DcMotorEx turretYaw = null;
+
+    //-----------------------
+    //--DECLARE AUXILIARIES--
+    //-----------------------
+    private Limelight3A limelight = null;
+    private GoBildaPrismDriver prism = null;
+
+
 
 
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -57,8 +80,35 @@ public class SITH_BLUE_TELE extends OpMode {
         //-------------------
         //----INIT SERVOS----
         //-------------------
-        liftServo = hardwareMap.get(Servo.class, "Servo");
-        liftServo.setPosition(0.0);
+        odometryLift = hardwareMap.get(Servo.class, "Servo");
+        odometryLift.setPosition(0.0);
+
+        hoodPitch = hardwareMap.get(Servo.class, "hoodPitch");
+        hoodPitch.setPosition(0.0);
+
+        //-------------------
+        //----INIT MOTORS----
+        //-------------------
+        intake = hardwareMap.get(DcMotorSimple.class, "intake");
+
+        turretYaw = hardwareMap.get(DcMotorEx.class, "turretYaw");
+        turretYaw.setDirection(DcMotorSimple.Direction.REVERSE);
+        turretYaw.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+        turretYaw.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+
+        //--------------------
+        //--INIT AUXILIARIES--
+        //--------------------
+        limelight = hardwareMap.get(Limelight3A.class, "limelight");
+        limelight.pipelineSwitch(0);
+
+
+        prism = hardwareMap.get(GoBildaPrismDriver.class, "prism");
+
+
+
+
+
 
     }
 
@@ -68,6 +118,10 @@ public class SITH_BLUE_TELE extends OpMode {
    @Override
    public void start() {
         follower.startTeleopDrive();
+
+        limelight.start();
+
+        prism.loadAnimationsFromArtboard(GoBildaPrismDriver.Artboard.ARTBOARD_0);
 
   }
 
@@ -123,11 +177,11 @@ public class SITH_BLUE_TELE extends OpMode {
 
 
        if (gamepad2.a) {
-           liftServo.setPosition(0.7);
+           odometryLift.setPosition(0.7);
        }
 
        if (gamepad2.b) {
-           liftServo.setPosition(0.0);
+           odometryLift.setPosition(0.0);
        }
 
 

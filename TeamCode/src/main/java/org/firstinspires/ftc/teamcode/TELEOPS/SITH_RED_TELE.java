@@ -13,7 +13,6 @@ import com.pedropathing.paths.PathChain;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
@@ -29,7 +28,7 @@ import java.util.function.Supplier;
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @Configurable
 @TeleOp
-public class SITH_BLUE_TELE extends OpMode {
+public class SITH_RED_TELE extends OpMode {
 
     private Follower follower;
     public static Pose startingPose;
@@ -83,24 +82,24 @@ public class SITH_BLUE_TELE extends OpMode {
         odometryLift = hardwareMap.get(Servo.class, "Servo");
         odometryLift.setPosition(0.0);
 
-        hoodPitch = hardwareMap.get(Servo.class, "hoodPitch");
-        hoodPitch.setPosition(0.0);
+       // hoodPitch = hardwareMap.get(Servo.class, "hoodPitch");
+        //hoodPitch.setPosition(0.0);
 
         //-------------------
         //----INIT MOTORS----
         //-------------------
-        intake = hardwareMap.get(DcMotorSimple.class, "intake");
+       // intake = hardwareMap.get(DcMotorSimple.class, "intake");
 
-        turretYaw = hardwareMap.get(DcMotorEx.class, "turretYaw");
-        turretYaw.setDirection(DcMotorSimple.Direction.REVERSE);
-        turretYaw.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
-        turretYaw.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+       // turretYaw = hardwareMap.get(DcMotorEx.class, "turretYaw");
+       // turretYaw.setDirection(DcMotorSimple.Direction.REVERSE);
+       // turretYaw.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+       // turretYaw.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
 
         //--------------------
         //--INIT AUXILIARIES--
         //--------------------
-        limelight = hardwareMap.get(Limelight3A.class, "limelight");
-        limelight.pipelineSwitch(0);
+      //  limelight = hardwareMap.get(Limelight3A.class, "limelight");
+    //    limelight.pipelineSwitch(0);
 
 
         prism = hardwareMap.get(GoBildaPrismDriver.class, "prism");
@@ -119,7 +118,7 @@ public class SITH_BLUE_TELE extends OpMode {
    public void start() {
         follower.startTeleopDrive();
 
-        limelight.start();
+     //   limelight.start();
 
         prism.loadAnimationsFromArtboard(GoBildaPrismDriver.Artboard.ARTBOARD_0);
 
@@ -142,14 +141,14 @@ public class SITH_BLUE_TELE extends OpMode {
                    -gamepad1.left_stick_y,
                    -gamepad1.left_stick_x,
                    -gamepad1.right_stick_x,
-                   true // Robot Centric
+                   false // Robot Centric
            );
                //This is how it looks with slowMode on
            else follower.setTeleOpDrive(
                    -gamepad1.left_stick_y * slowModeMultiplier,
                    -gamepad1.left_stick_x * slowModeMultiplier,
                    -gamepad1.right_stick_x * slowModeMultiplier,
-                   true // Robot Centric
+                   false // Robot Centric
            );
        }
        //Automated PathFollowing
@@ -182,6 +181,15 @@ public class SITH_BLUE_TELE extends OpMode {
 
        if (gamepad2.b) {
            odometryLift.setPosition(0.0);
+       }
+
+
+       if (gamepad2.y) {
+           prism.loadAnimationsFromArtboard(GoBildaPrismDriver.Artboard.ARTBOARD_1);
+       }
+
+       if (gamepad2.x) {
+           prism.loadAnimationsFromArtboard(GoBildaPrismDriver.Artboard.ARTBOARD_0);
        }
 
 

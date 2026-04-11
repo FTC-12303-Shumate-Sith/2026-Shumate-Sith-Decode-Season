@@ -140,7 +140,7 @@ public class SITH_RED_TELE extends OpMode {
            if (!slowMode) follower.setTeleOpDrive(
                    -gamepad1.left_stick_y,
                    -gamepad1.left_stick_x,
-                   -gamepad1.right_stick_x,
+                   -gamepad1.right_stick_x * 0.5,
                    false // Robot Centric
            );
                //This is how it looks with slowMode on

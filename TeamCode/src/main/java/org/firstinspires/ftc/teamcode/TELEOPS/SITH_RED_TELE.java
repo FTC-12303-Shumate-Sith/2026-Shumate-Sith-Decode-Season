@@ -47,6 +47,7 @@ public class SITH_RED_TELE extends OpMode {
     //-------------------
     //--DECLARE MOTORS---
     //-------------------
+    private DcMotorSimple shooter = null;
     private DcMotorSimple intake = null;
     private DcMotorEx turretYaw = null;
 
@@ -55,8 +56,6 @@ public class SITH_RED_TELE extends OpMode {
     //-----------------------
     private Limelight3A limelight = null;
     private GoBildaPrismDriver prism = null;
-
-
 
 
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -80,33 +79,26 @@ public class SITH_RED_TELE extends OpMode {
         //----INIT SERVOS----
         //-------------------
         odometryLift = hardwareMap.get(Servo.class, "Servo");
-        odometryLift.setPosition(0.0);
-
-       // hoodPitch = hardwareMap.get(Servo.class, "hoodPitch");
+        odometryLift.setPosition(0.7);
+        //hoodPitch = hardwareMap.get(Servo.class, "hoodPitch");
         //hoodPitch.setPosition(0.0);
 
         //-------------------
         //----INIT MOTORS----
         //-------------------
-       // intake = hardwareMap.get(DcMotorSimple.class, "intake");
-
-       // turretYaw = hardwareMap.get(DcMotorEx.class, "turretYaw");
-       // turretYaw.setDirection(DcMotorSimple.Direction.REVERSE);
-       // turretYaw.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
-       // turretYaw.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+        shooter = hardwareMap.get(DcMotorSimple.class, "shooter");
+        //intake = hardwareMap.get(DcMotorSimple.class, "intake");
+        //turretYaw = hardwareMap.get(DcMotorEx.class, "turretYaw");
+        //turretYaw.setDirection(DcMotorSimple.Direction.REVERSE);
+        //turretYaw.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+        //turretYaw.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
 
         //--------------------
         //--INIT AUXILIARIES--
         //--------------------
-      //  limelight = hardwareMap.get(Limelight3A.class, "limelight");
-    //    limelight.pipelineSwitch(0);
-
-
         prism = hardwareMap.get(GoBildaPrismDriver.class, "prism");
-
-
-
-
+        //limelight = hardwareMap.get(Limelight3A.class, "limelight");
+        //limelight.pipelineSwitch(0);
 
 
     }
@@ -117,11 +109,8 @@ public class SITH_RED_TELE extends OpMode {
    @Override
    public void start() {
         follower.startTeleopDrive();
-
-     //   limelight.start();
-
-        prism.loadAnimationsFromArtboard(GoBildaPrismDriver.Artboard.ARTBOARD_0);
-
+       prism.loadAnimationsFromArtboard(GoBildaPrismDriver.Artboard.ARTBOARD_1);
+        //limelight.start();
   }
 
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -151,20 +140,10 @@ public class SITH_RED_TELE extends OpMode {
                    false // Robot Centric
            );
        }
-       //Automated PathFollowing
-       if (gamepad1.aWasPressed()) {
-           follower.followPath(pathChain.get());
-           automatedDrive = true;
-       }
-       //Stop automated following if the follower is done
-       if (automatedDrive && (gamepad1.bWasPressed() || !follower.isBusy())) {
-           follower.startTeleopDrive();
-           automatedDrive = false;
-       }
+
        //Slow Mode
-       if (gamepad1.rightBumperWasPressed()) {
-           slowMode = !slowMode;
-       }
+       gamepad1.right_bumper = slowMode;
+
        //Optional way to change slow mode strength
        if (gamepad1.xWasPressed()) {
            slowModeMultiplier += 0.25;
@@ -175,20 +154,25 @@ public class SITH_RED_TELE extends OpMode {
        }
 
 
-       if (gamepad2.a) {
-           odometryLift.setPosition(0.7);
+       //Shooter
+       if (gamepad2.right_trigger >= 0.5) {
+           shooter.setPower(1.0);
+       } else if (gamepad2.left_trigger >= 0.5 ) {
+           shooter.setPower(-1.0);
+       } else {
+           shooter.setPower(0.0);
        }
 
-       if (gamepad2.b) {
+
+       if (gamepad2.a) {
+           odometryLift.setPosition(0.7);
+       } else if (gamepad2.b) {
            odometryLift.setPosition(0.0);
        }
 
-
        if (gamepad2.y) {
            prism.loadAnimationsFromArtboard(GoBildaPrismDriver.Artboard.ARTBOARD_1);
-       }
-
-       if (gamepad2.x) {
+       } else if (gamepad2.x) {
            prism.loadAnimationsFromArtboard(GoBildaPrismDriver.Artboard.ARTBOARD_0);
        }
 
@@ -196,5 +180,6 @@ public class SITH_RED_TELE extends OpMode {
        telemetryM.debug("position", follower.getPose());
        telemetryM.debug("velocity", follower.getVelocity());
        telemetryM.debug("automatedDrive", automatedDrive);
+
     }
 }

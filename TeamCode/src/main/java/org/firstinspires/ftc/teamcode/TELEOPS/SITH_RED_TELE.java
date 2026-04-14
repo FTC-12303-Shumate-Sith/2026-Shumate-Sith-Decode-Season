@@ -43,11 +43,14 @@ public class SITH_RED_TELE extends OpMode {
     //-------------------
     private Servo odometryLift = null;
     private Servo hoodPitch = null;
+    private Servo headLight = null;
+    private Servo rgbLight = null;
 
     //-------------------
     //--DECLARE MOTORS---
     //-------------------
     private DcMotorSimple shooter = null;
+    private DcMotorSimple twoShooter = null;
     private DcMotorSimple intake = null;
     private DcMotorEx turretYaw = null;
 
@@ -78,8 +81,13 @@ public class SITH_RED_TELE extends OpMode {
         //-------------------
         //----INIT SERVOS----
         //-------------------
-        odometryLift = hardwareMap.get(Servo.class, "Servo");
+        odometryLift = hardwareMap.get(Servo.class, "Odometry");
         odometryLift.setPosition(0.7);
+        headLight = hardwareMap.get(Servo.class, "Headlight");
+        rgbLight = hardwareMap.get(Servo.class, "RGBLight");
+        headLight.setPosition(0.3);
+        rgbLight.setPosition(0.279);
+
         //hoodPitch = hardwareMap.get(Servo.class, "hoodPitch");
         //hoodPitch.setPosition(0.0);
 
@@ -87,6 +95,7 @@ public class SITH_RED_TELE extends OpMode {
         //----INIT MOTORS----
         //-------------------
         shooter = hardwareMap.get(DcMotorSimple.class, "shooter");
+        twoShooter = hardwareMap.get(DcMotorSimple.class, "2shooter");
         //intake = hardwareMap.get(DcMotorSimple.class, "intake");
         //turretYaw = hardwareMap.get(DcMotorEx.class, "turretYaw");
         //turretYaw.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -157,10 +166,13 @@ public class SITH_RED_TELE extends OpMode {
        //Shooter
        if (gamepad2.right_trigger >= 0.5) {
            shooter.setPower(1.0);
+           twoShooter.setPower(-1.0);
        } else if (gamepad2.left_trigger >= 0.5 ) {
            shooter.setPower(-1.0);
+           twoShooter.setPower(1.0);
        } else {
            shooter.setPower(0.0);
+           twoShooter.setPower(0.0);
        }
 
 

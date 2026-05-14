@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.TELEOPS;
 
-
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
@@ -14,8 +13,10 @@ import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx; // CHANGED TO DcMotorEx
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.teamcode.Prism.GoBildaPrismDriver;
@@ -33,7 +34,6 @@ public class SITH_RED_TELE extends OpMode {
 
     private Follower follower;
     public static Pose startingPose;
-    private boolean automatedDrive;
     private Supplier<PathChain> pathChain;
     private TelemetryManager telemetryM;
 
@@ -48,8 +48,8 @@ public class SITH_RED_TELE extends OpMode {
     //-------------------
     //--DECLARE MOTORS---
     //-------------------
-    private DcMotorSimple shooter = null;
-    private DcMotorSimple twoShooter = null;
+    private DcMotorEx shooter = null; // CHANGED TO DcMotorEx
+    private DcMotorEx twoShooter = null; // CHANGED TO DcMotorEx
     private DcMotorSimple intake = null;
     private DcMotorSimple transfer = null;
 
@@ -58,6 +58,7 @@ public class SITH_RED_TELE extends OpMode {
     //-----------------------
     private Limelight3A limelight = null;
     private GoBildaPrismDriver prism = null;
+    private DigitalChannel stopSensor = null;
 
     //-----------------------
     //---DECLARE VARIABLES---
@@ -75,6 +76,24 @@ public class SITH_RED_TELE extends OpMode {
     private boolean isEndGame;
     private double slowModeMultiplier = 0.25;
     private boolean odometryState = true;
+    private boolean ballInTransfer = false;
+
+    //-----------------------
+    //---NEW CODE VARIABLES---
+    //-----------------------
+    private double shooterStartTime = 0;
+    private boolean shooterActive = false;
+    private double targetVelocity = 0;
+
+    // MATH CONSTANTS: GoBilda 5203 (6000 RPM) has 28 Ticks Per Revolution
+    private static final double MOTOR_TPR = 28.0;
+
+    // NEW: Interpolation Logic Variables
+    private double targetHoodPos = 1.0;
+    private final double[] distanceTable = {-15.0, -5.0, 5.0, 15.0}; // ty values
+    private final double[] velocityTable = {2850, 2550, 2250, 2050}; // shooter speeds (RPM)
+    private final double[] hoodTable     = {0.45, 0.6, 0.8, 1.0};    // hood positions
+    //-----------------------
 
     //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 // INIT
@@ -101,15 +120,25 @@ public class SITH_RED_TELE extends OpMode {
         rgbLight = hardwareMap.get(Servo.class, "RGBLight");
         headLight.setPosition(0.3);
         rgbLight.setPosition(0.279);
-
-        //hoodPitch = hardwareMap.get(Servo.class, "hoodPitch");
-        //hoodPitch.setPosition(0.0);
+        hoodPitch = hardwareMap.get(Servo.class, "hoodPitch");
+        hoodPitch.setPosition(1.0);
 
         //-------------------
         //----INIT MOTORS----
         //-------------------
-        shooter = hardwareMap.get(DcMotorSimple.class, "shooter");
-        twoShooter = hardwareMap.get(DcMotorSimple.class, "2shooter");
+        // NEW CODE: Setup for encoder based control
+        shooter = hardwareMap.get(DcMotorEx.class, "shooter");
+        twoShooter = hardwareMap.get(DcMotorEx.class, "2shooter");
+
+        shooter.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        // NEW: Velocity PIDF Tuning (Note: F adjusted based on Max Ticks/Sec ~2800)
+        shooter.setVelocityPIDFCoefficients(15, 3, 0, 12);
+        twoShooter.setVelocityPIDFCoefficients(15, 3, 0, 12);
+
+        shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        twoShooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
         intake = hardwareMap.get(DcMotorSimple.class, "intake");
         transfer = hardwareMap.get(DcMotorSimple.class,"transfer");
 
@@ -121,6 +150,8 @@ public class SITH_RED_TELE extends OpMode {
         prism.loadAnimationsFromArtboard(GoBildaPrismDriver.Artboard.ARTBOARD_0);
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         limelight.pipelineSwitch(0);
+        stopSensor = hardwareMap.get(DigitalChannel.class, "stop");
+        stopSensor.setMode(DigitalChannel.Mode.INPUT);
     }
 
     //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -148,7 +179,7 @@ public class SITH_RED_TELE extends OpMode {
 
 
         // When TeleOP time is over 100 seconds, Rumble Gamepad1
-        if ((getRuntime() >= 99) && !isEndGame){
+        if ((getRuntime() >= 99) && !isEndGame) {
             gamepad1.rumbleBlips(5);
             isEndGame = true;
         }
@@ -156,9 +187,18 @@ public class SITH_RED_TELE extends OpMode {
         //Limelight results
         LLResult result = limelight.getLatestResult();
         double tx = result.isValid() ? result.getTx() : 0;
+        double ty = result.isValid() ? result.getTy() : 0; // NEW CODE: vertical offset for distance
+
+        // NEW: Interpolation Logic for Distance (calculated every loop)
+        if (result.isValid()) {
+            targetVelocity = interpolate(ty, distanceTable, velocityTable);
+            targetHoodPos = interpolate(ty, distanceTable, hoodTable);
+        } else {
+            targetVelocity = 6000; // Default RPM
+        }
 
         //Enable auto aiming
-        if (gamepad1.left_trigger > 0.50) {
+        if (gamepad1.left_trigger > 0.50 || gamepad2.left_trigger > 0.50) {
             isAiming = true;
             if (result.isValid()) {
                 // Accumulate the error for the Integral term
@@ -178,6 +218,7 @@ public class SITH_RED_TELE extends OpMode {
         telemetry.addData("integralSum", integralSum); // Track the build up
         telemetry.addData("Slow Mode", slowMode);
         telemetry.addData("Valid Result", result.isValid());
+        telemetry.addData("Ball In Transfer?", ballInTransfer);
 
 
         //-------------------
@@ -202,9 +243,7 @@ public class SITH_RED_TELE extends OpMode {
                     rotatePower,
                     driveMode // Robot Centric
             );
-        }
-
-        else if (!slowMode) follower.setTeleOpDrive(
+        } else if (!slowMode) follower.setTeleOpDrive(
                 -gamepad1.left_stick_y,
                 -gamepad1.left_stick_x,
                 -gamepad1.right_stick_x * 0.5,
@@ -223,8 +262,56 @@ public class SITH_RED_TELE extends OpMode {
         //----SUB SYSTEMS----
         //-------------------
 
+        ballInTransfer = stopSensor.getState();
+
+        //-------------------
+        // NEW CODE: SHOOTER LOGIC (Velocity & Delay)
+        //-------------------
+        boolean shooterSpunUp = false;
+
+        if (gamepad2.right_trigger >= 0.5) {
+            if (!shooterActive) {
+                shooterStartTime = getRuntime();
+                shooterActive = true;
+            }
+
+            // MATH: Convert RPM (targetVelocity) to Ticks Per Second
+            double ticksPerSec = (targetVelocity * MOTOR_TPR) / 60.0;
+
+            shooter.setVelocity(ticksPerSec);
+            twoShooter.setVelocity(-ticksPerSec);
+
+            // Check if 1 second has passed
+            if (getRuntime() - shooterStartTime >= 1.0) {
+                shooterSpunUp = true;
+            }
+        } else {
+            shooterActive = false;
+            shooter.setVelocity(0);
+            twoShooter.setVelocity(0);
+        }
+
+        //-------------------
+        // NEW CODE: UPDATED TRANSFER LOGIC
+        //-------------------
+        // Run transfer if:
+        // 1. Shooter is fully spun up (feeds the balls)
+        // 2. OR intake is requested AND no ball is currently blocking the sensor
+        if (shooterSpunUp) {
+            transfer.setPower(1.0);
+        } else if ((!ballInTransfer) && (gamepad1.right_trigger >= 0.5 || gamepad2.a)) {
+            transfer.setPower(0.75);
+        } else if (gamepad2.b) {
+            transfer.setPower(-1.0);
+        } else {
+            transfer.setPower(0.0);
+        }
+
+
         //intake
-        if ((gamepad1.right_trigger >= 0.5) || (gamepad2.a)) {
+        if (shooterSpunUp) {
+            intake.setPower(1.0);
+        } else if ((gamepad1.right_trigger >= 0.5) || (gamepad2.a)) {
             intake.setPower(1.0);
         } else if (gamepad2.b) {
             intake.setPower(-1.0);
@@ -232,26 +319,19 @@ public class SITH_RED_TELE extends OpMode {
             intake.setPower(0.0);
         }
 
-        //Transfer
-        if (gamepad2.x) {
-            transfer.setPower(1.0);
-        } else if (gamepad2.y) {
-            transfer.setPower(-1.0);
-        } else {
-            transfer.setPower(0.0);
+        //Hood (NEW: Auto-Interpolation when aiming)
+        if (isAiming && result.isValid()) {
+            hoodPitch.setPosition(targetHoodPos);
+        } else if (gamepad2.dpad_up) {
+            hoodPitch.setPosition(0.6);
+        } else if (gamepad2.dpad_down) {
+            hoodPitch.setPosition(1.0);
+        } else if (gamepad2.dpad_right) {
+            hoodPitch.setPosition(0.8);
+        } else if (gamepad2.dpad_left) {
+            hoodPitch.setPosition(0.4);
         }
 
-        //Shooter
-        if (gamepad2.right_trigger >= 0.5) {
-            shooter.setPower(1.0);
-            twoShooter.setPower(-1.0);
-        } else if (gamepad2.left_trigger >= 0.5 ) {
-            shooter.setPower(-1.0);
-            twoShooter.setPower(1.0);
-        } else {
-            shooter.setPower(0.0);
-            twoShooter.setPower(0.0);
-        }
 
         //Toggle odometry lift position
         if (gamepad1.xWasPressed()) {
@@ -265,10 +345,28 @@ public class SITH_RED_TELE extends OpMode {
             odometryLift.setPosition(0.0);
         }
 
+        // NEW CODE: Additional Telemetry (Converts back to RPM for readout)
+        telemetry.addData("Shooter RPM", (shooter.getVelocity() * 60.0) / MOTOR_TPR);
+        telemetry.addData("Target RPM", targetVelocity);
+        telemetry.addData("Spun Up?", shooterSpunUp);
+        telemetry.addData("Target Hood", targetHoodPos);
 
         telemetryM.debug("position", follower.getPose());
         telemetryM.debug("velocity", follower.getVelocity());
-        telemetryM.debug("automatedDrive", automatedDrive);
 
+    }
+
+    // NEW: Interpolation Helper Method
+    private double interpolate(double input, double[] xTable, double[] yTable) {
+        if (input <= xTable[0]) return yTable[0];
+        if (input >= xTable[xTable.length - 1]) return yTable[yTable.length - 1];
+        for (int i = 0; i < xTable.length - 1; i++) {
+            if (input <= xTable[i + 1]) {
+                double x0 = xTable[i], x1 = xTable[i + 1];
+                double y0 = yTable[i], y1 = yTable[i + 1];
+                return y0 + (input - x0) * (y1 - y0) / (x1 - x0);
+            }
+        }
+        return yTable[yTable.length - 1];
     }
 }

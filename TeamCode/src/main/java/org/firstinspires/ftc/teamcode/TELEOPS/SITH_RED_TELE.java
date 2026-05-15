@@ -14,7 +14,7 @@ import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorEx; // CHANGED TO DcMotorEx
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.Servo;
@@ -213,12 +213,7 @@ public class SITH_RED_TELE extends OpMode {
             integralSum = 0; // Reset sum when not aiming to prevent "jumping" next time you trigger
         }
 
-        telemetry.addData("isAiming", isAiming);
-        telemetry.addData("tx", tx);
-        telemetry.addData("integralSum", integralSum); // Track the build up
-        telemetry.addData("Slow Mode", slowMode);
-        telemetry.addData("Valid Result", result.isValid());
-        telemetry.addData("Ball In Transfer?", ballInTransfer);
+
 
 
         //-------------------
@@ -351,6 +346,13 @@ public class SITH_RED_TELE extends OpMode {
         telemetry.addData("Target RPM", targetVelocity);
         telemetry.addData("Spun Up?", shooterSpunUp);
         telemetry.addData("Target Hood", targetHoodPos);
+
+        telemetry.addData("isAiming", isAiming);
+        telemetry.addData("tx", tx);
+        telemetry.addData("integralSum", integralSum); // Track the build up
+        telemetry.addData("Slow Mode", slowMode);
+        telemetry.addData("Valid Result", result.isValid());
+        telemetry.addData("Ball In Transfer?", ballInTransfer);
 
         telemetryM.debug("position", follower.getPose());
         telemetryM.debug("velocity", follower.getVelocity());

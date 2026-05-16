@@ -27,7 +27,7 @@ import java.util.function.Supplier;
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @Configurable
 @TeleOp
-public class SITH_RED_TELE extends OpMode {
+public class SITH_BLUE_TELE extends OpMode {
 
     private Follower follower;
     public static Pose startingPose;
@@ -116,7 +116,7 @@ public class SITH_RED_TELE extends OpMode {
         prism = hardwareMap.get(GoBildaPrismDriver.class, "prism");
         prism.loadAnimationsFromArtboard(GoBildaPrismDriver.Artboard.ARTBOARD_0);
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
-        limelight.pipelineSwitch(0);
+        limelight.pipelineSwitch(1);
         stopSensor = hardwareMap.get(DigitalChannel.class, "stop");
         stopSensor.setMode(DigitalChannel.Mode.INPUT);
     }
